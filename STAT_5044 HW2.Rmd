@@ -1,0 +1,120 @@
+---
+title: "STAT5044_HW2"
+author: "zhengzhi lin"
+date: "2019.9.30"
+output: pdf_document
+---
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+##Problem 1
+(a) The estimation function is $y_{i} = 10.2 + 4x_{i}$ There is a good fit of the estimation function.
+(b) $\hat{y} = 10.2 + 4\times1 = 14.2$
+(c) $10.2 + 4\times2 - (10.2 + 4\times1) = 4$
+(d) $10.2 + 4\times\overline{x} = 10.2 + 4\times1 = 14.2 = \overline{y}$ verified
+```{R}
+library(ggplot2)
+library(dplyr)
+airfreight <- read.table("airfreight.txt")
+airfreight <- airfreight[-1,]
+airfreight <- airfreight %>% as.data.frame() %>%
+  rename(transfer = V1, arrival = V2) %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate_if(is.character, as.numeric)
+
+fit <- lm(arrival~transfer, data = airfreight)
+summary(fit) # get coefficient
+
+ggplot(data = airfreight, aes(x = transfer, y = arrival)) + geom_point() + geom_smooth(method = "lm") + 
+  labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                     "Intercept =",signif(fit$coef[[1]],5 ),
+                     " Slope =",signif(fit$coef[[2]], 5),
+                     " P =",signif(summary(fit)$coef[2,4], 5)))
+fit$coef[[1]] + 1 * fit$coef[[2]]
+fit$coef[[1]] + 2 * fit$coef[[2]]
+
+fit$coef[[1]] + mean(airfreight$transfer) * fit$coef[[2]]
+
+mean(airfreight$arrival)
+
+```
+
+##Problem 2 
+(a)
+CI: $\hat{\beta_{1}} \pm t_{8,\frac{\alpha}{2}}\sqrt{\hat{\sigma^2}\mathrm{Sxx}}$ That is 
+    $4 \pm 8.528029\times0.4690416 = 4 \pm 4$
+(b) $H_{0} : \beta_{1} = 0 \text{ , } H_{a} : \text{not } H_{0}$ p-value equals to 2.748669e-05,less than 0.05, reject $H_{0}$ We here use the t statistic, which is 
+$t= \frac{\hat{\beta_{1}} - 0}{\sqrt{\hat{\sigma^2}\mathrm{Sxx}}}$ follows a t distribution which has df=2.
+
+(c)
+$H_{0} : \beta_{1} = 0 \text{ , } H_{a} : \beta_{1} > 0$ p-value is 1.374335e-05. The decision rule is same as (b), p-value is smaller that 0.05, so reject $H_{0}$
+
+(d)
+CI: $\hat{\beta_{0}} \pm t_{8,\frac{\alpha}{2}}\sqrt{\hat{\sigma^2}\mathrm{(\frac{1}{n} + \frac{\overline{x}^2}{Sxx}})}$ That is 
+    $10.2 \pm 15.377\times0.4690416 = 10.2 \pm 7.212453$
+
+(e) $H_{0} : \beta_{0} \leq 9 \text{ , } H_{a} : \beta_{0} > 9$ p-value is 0.05402227, larger than 0.025, can't reject $H_{0}$. The decision rule is same as above
+```{r}
+X <- cbind(rep(1,10),airfreight$transfer)
+Y <- airfreight$arrival
+h <- X %*% solve(t(X) %*% X) %*% t(X)
+Sxx <- sum((X[,2] - mean(X[,2])) ^ 2)
+Sxy <- sum((X[,2] - mean(X[,2])) * (Y - mean(Y)))
+beta1_hat <- Sxy/Sxx
+beta0_hat <- mean(Y) - beta1_hat * mean(X[,2])
+sigma_hat <- t(Y) %*% (diag(1,10,10) - h) %*% Y/8
+t <- beta1_hat/sqrt(sigma_hat/Sxx)
+t2 <- beta0_hat/sqrt(sigma_hat * (1 / 10 + mean(X[,2]) ^ 2 / Sxx))
+t
+t2
+sqrt(sigma_hat/Sxx)
+2*pt(-abs(t),df=8) # p-value
+qt(.025, 8, lower.tail = TRUE, log.p = FALSE)
+qt(.025, 8, lower.tail = FALSE, log.p = FALSE)
+pt(-t,df=8) #p-value
+
+t3 <- (beta0_hat - 9)/sqrt(sigma_hat * (1 / 10 + mean(X[,2]) ^ 2 / Sxx))
+t3
+pt(-abs(t3),df=8) # p-value
+qt(.025, 8, lower.tail = FALSE, log.p = FALSE)
+
+```
+
+
+##Problem 3
+
+(a) predicted value of broken ampules with 2 shipments is 18.2, the upper bound is 20.42571, lower bound is 15.97429.
+    predicted value of broken ampules with 4 shipments is 26.2, the upper bound is 31.17684, lower bound is 21.22316.
+
+(b) predicted value of broken ampules with 2 shipments is 18.2, the upper bound is 23.65186, lower bound is 12.7481.
+
+(c) predicted mean value of broken ampules with 3 of 2 shipments is 18.2, the upper bound is 23.65186, lower bound is 12.7481.
+
+```{r}
+#(a)
+predict(fit,data.frame(transfer = 2), interval = "confidence", level = .99)
+predict(fit,data.frame(transfer = 4), interval = "confidence", level = .99)
+#(b)
+predict(fit,data.frame(transfer = 2), interval = "prediction", level = .99)
+#c
+predict(fit,data.frame(transfer = 2), interval = "prediction", level = 1-0.01/3)
+predict(fit,data.frame(transfer = 2), interval = "prediction", level = 1-0.01/3)
+predict(fit,data.frame(transfer = 2), interval = "prediction", level = 1-0.01/3)
+```
+
+
+##Problem 4
+
+
+```{r}
+anova(lm(arrival~transfer, data = airfreight)) # full model
+anova(lm(arrival~1, data = airfreight)) #reduced model
+l <- summary(lm(arrival~transfer, data = airfreight))
+l$r.squared#multiple correlation coeficient
+Sxx <- sum((X[,2] - mean(X[,2])) ^ 2)
+Sxy <- sum((X[,2] - mean(X[,2])) * (Y - mean(Y)))
+Syy <- sum((Y - mean(Y)) * (Y - mean(Y)))
+r <- Sxy / sqrt(Sxx * Syy)
+r
+```
