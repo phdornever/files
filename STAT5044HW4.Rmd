@@ -1,0 +1,288 @@
+---
+title: "STAT5044_HW4"
+author: "zhengzhi lin"
+date: "2019.10.30"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+##Problem 1
+(a) The estimated function is: $\mathrm{Y = 4.15 + 7.87 * X_{1}} - 1.32 * X_{2} + 6.24 * X_{3}$.
+The coefficients, b1 represents the difference in the predicted value of Y for each one-unit difference in X1, if X2,X3 remains constant. b2 represents the difference in the predicted value of Y for each one-unit difference in X2, if X1,X3 remains constant. b3 represents the difference in the predicted value of Y for each one-unit difference in X3, if X2,X1 remains constant.
+```{r}
+library(ggplot2)
+library(dplyr)
+library(knitr)
+p1 <- read.table("datahw4.txt")
+p1 <- p1 %>% as.data.frame() %>% rename( y = V1,
+                                        x1 = V2,
+                                        x2 = V3,
+                                        x3 = V4) %>%  
+  mutate_if(is.factor, as.character) %>% 
+  mutate_if(is.character,as.numeric)
+p1 <- p1[-1,]
+X <- cbind(rep(1,nrow(p1)),p1[,2:4])
+Y <- p1[,1]
+X <- as.matrix(X)
+Y <- as.matrix(Y)
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% Y    #estimation of beta
+Y_hat <- X %*% beta_hat
+beta_hat
+```
+
+(b) The plot shows that the residual is randomly distributed and mean is close to zero. Therefore the error is random.
+```{r}
+#residuals
+residual <- Y - Y_hat
+ggplot(data = as.data.frame(residual),aes(y=Y)) + geom_boxplot()
+```
+
+(c) 
+
+Plot of residual against Y shows that there is positive linear correlation between and residuals and Y. That is not some particular thing because we can percieve this by calculating the expression of $\mathrm{cov(Y,\hat{Y})}$, which will show a positive result. However this plot does tell us some additional information about the some outlier in the data, outliers also have positive linear relation with their residuals.
+
+Plot of residual against X1,X2,X1X2 is well-behaved, since the points bounce randomly around residual=0 line. It shows a good fit of the regression line.
+
+Plot of residual against X3 is not what we would like to see. because too many points centered in x=0.
+```{r}
+dat <- as.data.frame(cbind(residual,Y, X, X[,3]*X[,2]))
+colnames(dat) <- c("residual", "Y", "X0" ,"X1", "X2", "X3" , "X1X2")
+ggplot(data = dat) + geom_point(aes(x=Y,y=residual)) + ggtitle("Y,residual")
+ggplot(data = dat) + geom_point(aes(x=X1,y=residual)) + ggtitle("X1,residual")
+ggplot(data = dat) + geom_point(aes(x=X2,y=residual)) + ggtitle("X2,residual")
+ggplot(data = dat) + geom_point(aes(x=X3,y=residual)) + ggtitle("X3,residual")
+ggplot(data = dat) + geom_point(aes(x=X1X2,y=residual)) + ggtitle("X1X2,residual")
+ggplot(data = dat) + stat_qq(aes(sample = residual))
+```
+
+(d)
+The erro terms are not correlated because the residuals scatter randomly around line residual=0.
+```{r}
+plot(x = c(1:nrow(residual)),y = residual)
+```
+
+
+(e)
+Decision rule: If p-value is higher than $\alpha$, we accept $H_{0}$, otherwise we reject $H_{0}$.we use t statistics in the test H0: constant variance vs Ha: not H0. The t statistic follows t distribution which yeilds a p-value = 0.133 is higher than 0.01, therefore we cannot reject H0, so we conclude that our regression model has constant error variance.
+```{r}
+Y_hat <- cbind(Y_hat,residual)
+Y_hat <- as.data.frame(Y_hat)
+colnames(Y_hat) <- c("y_hat","residuals")
+Y_hat <- Y_hat[order(Y_hat$y_hat),]
+r1 <- Y_hat$residuals[1:26]
+r2 <- Y_hat$residuals[27:52]
+n1 <- 26
+n2 <- 26
+r1nod <- median(r1)
+r2nod <- median(r2)
+d1 <- abs(r1 - r1nod)
+d2 <- abs(r2 - r2nod)
+s <-(sum((d1 - mean(d1))^2) + sum((d2 - mean(d2))^2))/(10-2)
+t_bf <- (mean(d1) - mean(d2))/sqrt((1/n1 + 1/n2) * s) # t distribution with df 5+5-2=8
+
+pt(t_bf, 8, lower.tail = FALSE, log.p = FALSE) # P-value is .133, fail to reject constant variance
+```
+
+(f)
+Decision rule:p-value smaller than $\alpha$, reject $H_{0}$, otherwise, accept it.
+$H_{00} : \beta_{1} = \beta_{2} = \beta_{3} = 0 \text{ , } H_{a} : \text{not } H_{00}$
+The p-value is 3.315708e-12, reject H0. 
+Conclusion: $\beta_{1},\beta_{2},\beta_{3}$ not all equals to 0, there is a regression relation between Y and predictors.
+Implication: $\beta_{1},\beta_{2},\beta_{3}$ at least one of them is not 0.
+
+
+```{r}
+sse <- sum((X%*%solve(t(X)%*%X)%*%t(X)%*%Y - Y)^2)
+ssr <- sum((X%*%solve(t(X)%*%X)%*%t(X)%*%Y - mean(Y))^2)
+f <- (ssr)/3 / (sse/(52-4))               #f statistic
+pf(f,3,48,lower.tail = FALSE)
+```
+
+
+(g)
+
+```{r}
+sse <- sum(residual^2)
+s <- sqrt(sse/(52-4))
+bon_t <- qt(0.05/6, 48,lower.tail = F)
+upper <- beta_hat + bon_t * s * sqrt(diag(solve(t(X)%*%X)))
+lower <- beta_hat - bon_t * s * sqrt(diag(solve(t(X)%*%X)))
+t <- as.data.frame(cbind(lower,beta_hat,upper))
+colnames(t) <- c("lower","beta","upper")
+kable(t)
+```
+
+
+(h)
+
+```{r}
+ssr_x1 <- sum((mean(Y) - X[,1:2] %*% solve(t(X[,1:2]) %*% X[,1:2]) %*% t(X[,1:2]) %*% Y)^2)
+ssr_x3x1 <- sum((mean(Y) - X[,c(1,2,4)] %*% solve(t(X[,c(1,2,4)]) %*% X[,c(1,2,4)]) %*% t(X[,c(1,2,4)]) %*% Y)^2)
+ssr_x3x1-ssr_x1    #ssr with x3 given x1
+ssr_x1x2x3 <- sum((mean(Y) - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2)
+ssr_x2 <- sum((mean(Y) - X[,c(1,3)] %*% solve(t(X[,c(1,3)]) %*% X[,c(1,3)]) %*% t(X[,c(1,3)]) %*% Y)^2)
+ssr_x1x2x3 - ssr_x3x1 #ssr with x2 given x1 and x3
+
+#obtain the ANOVA table by using package
+anova(lm(y~x1 + x3 + x2,data = p1))
+```
+
+(i)
+$H_{0} : \beta_{2} = 0 \text{ , } H_{a} : \text{not } H_{20}$
+Decision rule: If p-value is smaller than $\alpha$, we reject H0, otherwise accept null hypothesis. 
+The p-value is 0.57, fail to reject H0. 
+Conclusion:X2 can be dropped from the model.
+Implication: $\beta_{2}=0$
+```{r}
+f <- (ssr_x1x2x3 - ssr_x3x1)/1/(sse/48)
+pf(f,1,48,lower.tail = FALSE)
+```
+
+
+(k)
+```{r}
+#SSR of X1 / SST
+sum((mean(Y) - X[,1:2] %*% solve(t(X[,1:2]) %*% X[,1:2]) %*% t(X[,1:2]) %*% Y)^2) / sum((Y - mean(Y))^2)
+
+#SSR of X2 / SST
+sum((mean(Y) - X[,c(1,3)] %*% solve(t(X[,c(1,3)]) %*% X[,c(1,3)]) %*% t(X[,c(1,3)]) %*% Y)^2) / sum((Y - mean(Y))^2)
+
+#SSR of X1+X2 / SST
+sum((mean(Y) - X[,1:3] %*% solve(t(X[,1:3]) %*% X[,1:3]) %*% t(X[,1:3]) %*% Y)^2) / sum((Y - mean(Y))^2)
+
+#SSR of X1+X2 - SSR of X2 / SSE of X2
+
+(sum((mean(Y) - X[,1:3] %*% solve(t(X[,1:3]) %*% X[,1:3]) %*% t(X[,1:3]) %*% Y)^2) - 
+  sum((mean(Y) - X[,c(1,3)] %*% solve(t(X[,c(1,3)]) %*% X[,c(1,3)]) %*% t(X[,c(1,3)]) %*% Y)^2))/ sum((Y - mean(Y))^2)
+
+#SSR of X1+X2 - SSR of X1 / SSE of X1
+
+(sum((mean(Y) - X[,1:3] %*% solve(t(X[,1:3]) %*% X[,1:3]) %*% t(X[,1:3]) %*% Y)^2) - 
+  sum((mean(Y) - X[,c(1,2)] %*% solve(t(X[,c(1,2)]) %*% X[,c(1,2)]) %*% t(X[,c(1,2)]) %*% Y)^2))/ sum((Y - mean(Y))^2)
+
+# R squared = SSR/SST
+
+sum((mean(Y) - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / sum((Y - mean(Y))^2)
+
+```
+
+(l)
+
+```{r}
+sdx <- X %>% as.data.frame() %>% mutate( x1 = (x1 - mean(x1))/sd(x1),
+                     x2 = (x2 - mean(x2))/sd(x2),
+                     x3 = (x3 - mean(x3))/sd(x3)) %>% as.matrix()
+sdy <- (Y - mean(Y))/sd(Y)
+beta_sd <- solve(t(sdx) %*% sdx) %*% t(sdx) %*% sdy
+beta_sd
+```
+
+(m)
+
+As we see in the summary, there is few correlation between different predictors. 
+
+It is a good way to fit a standardized regression model, because each predictors have very different scale, so it is a good way to make them standardized in order to compare which one would have larger effect on response variable while keep others constant.
+```{r}
+summary(lm(x1~x2,data = p1))
+summary(lm(x1~x3,data = p1))
+summary(lm(x3~x2,data = p1))
+result <- c(0.007207,0.002085,0.01285)
+result <- as.matrix(result)
+result <- as.data.frame(result)
+rownames(result) <- c("X1X2 R^2","X1X3 R^2","X2X3 R^2")
+kable(result)
+```
+
+(n)
+
+```{r}
+beta_sd[2] - beta_hat[2]*sd(X[,2])/(sd(Y)) #beta for X1
+beta_sd[3] - beta_hat[3]*sd(X[,3])/(sd(Y)) #beta for X2
+beta_sd[4] - beta_hat[4]*sd(X[,4])/(sd(Y)) #beta for X3
+
+```
+
+
+(o)
+$SSR(X_{1}) = 2.199$
+$SSR(X_{1}|X_{2}) = SSR(X_{1},X_{2}) - SSR(X_{2})) = 0.092 + 2.199 - 0.184 = 2.107 $
+There is difference between them, but the difference is not substantial.
+```{r}
+anova(lm(scale(y)~scale(x1)+scale(x2),data = p1))[1,2] + anova(lm(scale(y)~scale(x1)+scale(x2),data = p1))[2,2] - anova(lm(scale(y)~scale(x2),data = p1))[1,2] #SSR X1 given X2
+
+anova(lm(scale(y)~scale(x1)+scale(x2),data = p1))[1,2] + anova(lm(scale(y)~scale(x1)+scale(x2),data = p1))[2,2] - anova(lm(scale(y)~scale(x2),data = p1))[1,2] - anova(lm(scale(y)~scale(x1),data = p1))[1,2]
+
+0.092 + 2.199 - 0.184 
+```
+
+#Problem 2
+
+(a)
+
+The scatter plots suggests there are linear relationships between (Y,X1), (Y,X2), (Y,X3), (Y,X4), (X4,X3). The plots suggest the linear relation between (Y,X1) and (Y,X2) are weak, but strong for the other two. There is colinearity between X4 and X3 by taking a look at the plot of X3 and X4. X3 and X2 also has linear relation. Therefore there exists multicolinearity problem. 
+```{r}
+p2 <- read.table("jobhw4.txt",header = T)
+pairs(p2)
+cor(p2)
+
+```
+
+(b)
+The p-value of X2 is not significant, but for the others are significant. Thus we could retain the others and drop X2.
+```{r}
+model <- lm(Y ~ ., data = p2)
+summary(model)
+```
+
+(c)
+The four best $R^2$ is 0.9628918,0.9615422,0.9340931,0.9329956.
+{X1,X2,X3,X4},{X1,X3,X4},{X1,X2,X3},{X1,X3}
+```{r}
+library(leaps)
+result2 <- leaps(y=p2[,1],x=p2[,2:5],method = "r2")
+result2$which
+sort(result2$r2)
+result2$r2
+```
+
+(d)
+I would use AIC. I conclude the first model has lower AIC thus better than other three.
+```{r}
+AIC(lm(Y ~ ., data = p2))
+AIC(lm(Y ~ X1+X3+X4, data = p2))
+AIC(lm(Y ~ X1+X2+X3, data = p2))
+AIC(lm(Y ~ X1+X3, data = p2))
+```
+
+(e)
+The best subset should be ${X_{1},X_{3},X_{4}}$ because it has a very small SSE(close to full model), small BIC, and a big $R^2$.
+```{r}
+bmodel <- regsubsets(Y~.,data = p2, method = "backward")
+b <- summary(bmodel)
+b
+b$rss
+b$bic
+b$rsq
+```
+
+(f)
+The best subset should be ${X_{1},X_{3},X_{4}}$ because it has a very small SSE(close to full model), small BIC, and a big $R^2$.
+```{r}
+fmodel <- regsubsets(Y~.,data = p2,method = "forward")
+f <- summary(fmodel)
+f
+f$rss
+f$bic
+f$rsq
+```
+
+
+(g)
+The best subset is also ${X_{1},X_{3},X_{4}}$
+```{r}
+g <- lm(Y~.,data=p2)
+step(g)
+```
+
+(h)
+They are same. Because we only have 4 variables, and all of them are continuous, thus it is very likely that all methods give out same result.
