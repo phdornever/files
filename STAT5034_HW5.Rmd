@@ -1,0 +1,119 @@
+---
+title: "STAT5034_HW5"
+author: "zhengzhi lin"
+date: "2019.10.31"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+#Problem 1
+  For sample variance, we have: $\dfrac{(n-1)S^2}{\sigma^2} \sim \chi^2_{n-1}$.\
+  \newline Thus we can obtain a probability interval of it.
+\begin{center}
+    $\chi^2_{1 - \frac{\alpha}{2}} \le \dfrac{(n-1)S^2}{\sigma^2} \le \chi^2_{\frac{\alpha}{2}}$
+    \bigbreak
+    $\Rightarrow \dfrac{(n-1)S^2}{\chi^2_{\frac{\alpha}{2}}} \le \sigma^2 \le \dfrac{(n-1)S^2}{\chi^2_{1-\frac{\alpha}{2}}}$
+    \bigbreak
+\begin{flushleft}
+    Then we get the lower and upper bounds C.I of $\sigma^2$:\\
+\end{flushleft}
+    \bigbreak
+    $\Rightarrow \sqrt{\dfrac{(n-1)S^2}{\chi^2_{\frac{\alpha}{2}}}} \le \sigma^2 \le \sqrt{\dfrac{(n-1)S^2}{\chi^2_{1-\frac{\alpha}{2}}}}$
+\end{center}
+The bounds for $\sigma$ is appropriate because the pivot is $\chi$ ditributed thus the bounds can not be negtive.
+
+#Problem 2
+$\overline{Y}$ tends to be normal asymptotically, and we have ${\overline{Y} \sim N(\lambda, \frac{\lambda}{n})}$
+\bigbreak
+Then we know that $\sqrt{n}\dfrac{\overline{Y} - \lambda}{\sqrt{\lambda}} \sim N(0,1)$, and an appropriate estimator for$\lambda$ is $\overline{Y}$
+\bigbreak
+Therefore : $P(z_{\alpha_{1}} \le \sqrt{n}\dfrac{\overline{Y} - \lambda}{\sqrt{\overline{Y}}} \le z_{\alpha_{2}}) = 95\%$
+\bigbreak
+Let $\alpha = 0.05$ The we get our tail probabilities $\alpha_{1} = 1-0.025 = 0.975\text{, }\alpha_{2} = 0.025$
+\bigbreak
+So $z_{0.975} = -1.96 \text{, } z_{0.025} = 1.96$
+\bigbreak
+The CI for $\lambda$ is:
+\bigbreak
+\begin{center}
+          $z_{\alpha_{1}} \le \sqrt{n}\dfrac{\overline{Y} - \lambda}{\sqrt{\overline{Y}}} \le z_{\alpha_{2}}$
+          \bigbreak
+          $\Rightarrow \overline{Y} - z_{2}\frac{\sqrt{\overline{Y}}}{\sqrt{n}} \le \lambda \le \overline{Y} - z_{1}\frac{\sqrt{\overline{Y}}}{\sqrt{n}} \le \lambda$
+          \bigbreak
+          $\overline{Y} = 7.04,\quad n = 25$
+          \bigbreak
+          $\Rightarrow \text{CI:} \quad 6 \le \lambda \le 8.08$
+\end{center}
+```{r}
+y <- c(11,7,2,7,4,8,13,3,6,6,15,8,2,4,5,11,11,4,9,3,9,8,5,9,6)
+length(y)
+mean(y)
+qnorm(0.975,mean = 0,sd = 1, lower.tail = F)
+qnorm(0.025,mean = 0,sd = 1, lower.tail = F)
+```
+
+\section{Problem 3}
+\subsection{a}
+\begin{center}
+    $\log(f(y,\theta)) = \log(\theta) + (\theta - 1)\log(y)$\\
+    \bigbreak
+    $\Rightarrow \dfrac{\partial \log(f(y,\theta))}{\partial \theta} = \frac{1}{\theta} +\log (y)$
+    \bigbreak
+\begin{flushleft}
+    Let the partial derivative equals to 0, we get MLE estimator for $\theta$:
+\end{flushleft}
+    \bigbreak
+     $\hat{\theta} = -\frac{1}{\log(y)}$
+\end{center}
+\subsection{b}
+\begin{align*}
+    \begin{split}
+         f_{Y_{1}, \dots, Y_{n}}(y_{1},\dots, y_{n}; \theta) 
+          &= \prod_{i=1}^n f_{Y_{i}}(y_{i};\theta)\\
+          &= \prod_{i=1}^n \theta y_{i}^{\theta - 1}\\
+          &= \theta^n \left(\prod_{i=1}^n y_{i}\right)^{\theta - 1}
+    \end{split}
+\end{align*}
+\begin{center}
+\begin{flushleft}
+$\Rightarrow \log f = n \log \theta + (\theta - 1) \log \left(\prod y_{i}\right) $
+$\Rightarrow \dfrac{\partial f}{\partial \theta} = n \log \theta + (\theta - 1)\log \left(\prod y_i \right)$
+\end{flushleft}
+\bigbreak
+$\Rightarrow \hat{\theta} = \dfrac{n}{-\log \left(\prod y_{i}\right)}$
+\end{center}
+
+\section{Problem 6}
+
+(a)
+CI of the proportion: (0.3129798,0.6870202)
+
+```{r}
+f=function(p,alpha,flag=TRUE){
+  if(flag==TRUE){difference=alpha-pbinom(15,30,p)}
+  if(flag==FALSE){difference=alpha-pbinom(14,30,p,lower.tail=FALSE)}
+  return(abs(difference))}
+
+#For alpha_1:
+optimize(f,int=c(0,1),maximum=FALSE,alpha=.025,flag=TRUE)
+optimize(f,int=c(0,1),maximum=FALSE,alpha=.025,flag=FALSE)
+```
+
+
+(b)
+When sample size is large, binominal distribution weakly converges to normal distribution.
+
+$\overline{X} \sim N(np,np(1-p))$. Then we get $\frac{\overline{X}}{n} \sim N(p,\frac{p(1-p)}{n})$.
+
+$\hat{p} = \frac{\overline{X}}{n} = \frac{15}{30} = 0.5$
+
+Then CI is: $\tilde p \pm 1.96\sqrt{\tilde p(1-\tilde p)/n}.$
+That is (0.3210773,0.6789227). I prefer the large sample one because it is narrower than exact CI.
+
+(c)
+
+The probability is 0.903
+```{r}
+pbinom(15,30,0.4,lower.tail = T)
+```
